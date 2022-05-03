@@ -1,0 +1,77 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+install.packages("glmnet", repos = "http://cran.us.r-project.org")
+```
+
+```{r}
+library(glmnet)
+```
+
+```{r}
+dataPath<-"./"
+```
+```{r}
+data <- read.csv(paste(dataPath,"test_sample.csv",sep="/"),header=T)
+```
+```{r}
+X<-data.matrix(data[,2:492])
+Y<-data[,1]
+dim(X)
+length(Y)
+```
+```{r}
+set.seed(1) 
+cv.out=cv.glmnet(x=X,y=Y,alpha=1)
+plot(cv.out)
+```
+```{r}
+(bestlam =cv.out$lambda.min)
+```
+
+```{r}
+out=glmnet(x=as.matrix(data[,2:492]),y=as.vector(data[,1]),alpha=1,lambda=bestlam)
+```
+```{r}
+lasso.coef=predict(out,type="coefficients",s=bestlam)
+```
+```{r}
+head(lasso.coef)
+length(lasso.coef)
+```
+```{r}
+eliminatedByLasso = which(lasso.coef[-1] == 0, arr.ind = FALSE, useNames = FALSE)
+length(eliminatedByLasso)
+```
+
+```{r}
+linear_model = lm(Y~., data=data.frame(Y=Y, X=X))
+```
+
+```{r}
+indecses = coefficients(summary(linear_model))[-1,4] > 0.05
+eliminatedByLm =  which(indecses, arr.ind = FALSE, useNames = TRUE)
+length(eliminatedByLm)
+```
+```{r}
+res = matrix(c("lasso","lm","",""),ncol=2)
+colnames(res) <- c("model","removed_regressors")
+res[,"removed_regressors"][1] = paste0(eliminatedByLasso,collapse = " ")
+res[,"removed_regressors"][2] = paste0(eliminatedByLm,collapse = " ")
+write.csv(res,"W2answer.csv",quote=FALSE,row.names = F)
+```
+```{r}
+res
+```
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,53 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+install.packages("stringi")
+install.packages("magrittr")
+urlPackage <- "https://cran.r-project.org/src/contrib/Archive/xgboost/xgboost_1.2.0.1.tar.gz"
+install.packages(urlPackage, repos=NULL, type="source")
+```
+```{r}
+install.packages("randomForest")
+```
+
+```{r}
+suppressWarnings(library(xgboost))
+suppressWarnings(library(randomForest))
+```
+```{r}
+dataPath = "./"
+train <- read.csv(paste(dataPath,"train_sample.csv",sep="/"),header=T)
+test <- read.csv(paste(dataPath,"test_sample.csv",sep="/"),header=T)
+```
+```{r}
+m = ncol(train)
+predictors = paste0("X", 1:(m-1))
+target = train$class
+set.seed(1)
+params = list("objective" = "binary:logistic")
+data.mat = data.matrix(train[predictors])
+cv = xgb.cv(params = params, data = data.mat, label = target, 
+            nfold = 5, nrounds = 50, prediction = T, verbose = F)
+cv.table = cv$evaluation_log
+bestNR = which.min(cv.table$test_error_mean)
+set.seed(1)
+xg.model = xgboost(data = data.mat, label = target, params = params, nrounds = bestNR, verbose = F)
+xg.error = mean((target - round(predict(xg.model, newdata=data.mat)))^2)
+test.mat = data.matrix(test[predictors])
+xg.pred = round(predict(xg.model, newdata=test.mat))
+```
+```{r}
+set.seed(1)
+y = as.factor(train$class)
+rf.model <- randomForest(x = data.mat, y, ntree=500, importance=TRUE)
+print(rf.model)
+importance(rf.model)
+varImpPlot(rf.model, main="Variable Importance")
+most = 2
+pred = data.matrix(cbind(test$id, xg.pred))
+saveRDS(list(RFMostImportant = most, Forecast = pred), "W4answer.rds")
+```
+
+

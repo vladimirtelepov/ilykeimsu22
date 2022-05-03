@@ -1,0 +1,55 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+install.packages("rpart.plot", repos = "http://cran.us.r-project.org")
+```
+
+```{r}
+library('rpart')
+library("rpart.plot")
+library('MASS')
+```
+
+```{r}
+dataPath<-"./"
+data <- read.csv(paste0(dataPath,"test_sample.csv"))
+dim(data)
+```
+```{r}
+#regression tree
+set.seed(1)
+sfit <- rpart(Y ~ ., data = data, method ='poisson', control = rpart.control(cp = 0))
+bestcp = sfit$cptable[which.min(sfit$cptable[,'xerror']), 'CP']
+prunedTree = prune(sfit, bestcp)
+prp(prunedTree)
+```
+```{r}
+nbfit = glm.nb(Y ~., data = data)
+```
+```{r}
+rmse <- function(x) sqrt(mean(x^2))
+treeRmse = rmse(resid(prunedTree))
+nbRmse = rmse(nbfit$residuals)
+options(digits=4)
+print('MSE')
+print(c(Tree = treeRmse, Nb = nbRmse))
+```
+```{r}
+newdata = rbind(data, c(0, 4, 4, 4))
+last = nrow(newdata)
+preTree = predict(prunedTree, newdata = newdata[last,2:4])
+pred0Tree = dpois(0, lambda = preTree)
+
+mu = predict(nbfit, newdata[last, 2:4], type='response')
+pred0nb = dnbinom(0, mu=mu, size=nbfit$theta)
+```
+```{r}
+print('Predicted mean')
+print(c(Tree = preTree, Nb = mu))
+print('Zero prediction')
+print(c(Tree = pred0Tree, Nb = pred0nb))
+```
+
+
